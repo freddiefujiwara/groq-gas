@@ -10,52 +10,23 @@ export function doGet(e) {
     return createJsonResponse({ error: "Parameter 'p' is required." });
   }
 
-  const now = new Date().getTime();
-  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-  const SIX_HOURS_S = 6 * 60 * 60;
-
   // 2. Check the cache
   const cache = CacheService.getScriptCache();
   // Base64 encode the prompt to use as a key to prevent key conflicts
   const cacheKey = "groq_" + Utilities.base64Encode(Utilities.newBlob(prompt).getBytes()).substring(0, 200);
+  const cachedResponse = cache.get(cacheKey);
 
-  let result = cache.get(cacheKey);
+  let result;
   let isCached = false;
 
-  if (result != null) {
+  if (cachedResponse != null) {
+    result = cachedResponse;
     isCached = true;
   } else {
-    // Check secondary cache (PropertiesService) for 1-day storage
-    const props = PropertiesService.getScriptProperties();
-    const secondaryCached = props.getProperty(cacheKey);
-    if (secondaryCached != null) {
-      try {
-        const data = JSON.parse(secondaryCached);
-        if (data.e > now) {
-          result = data.v;
-          isCached = true;
-          // Refresh primary cache (6 hours)
-          cache.put(cacheKey, result, SIX_HOURS_S);
-        }
-      } catch (err) {
-        // If parsing fails, ignore and proceed to call API
-      }
-    }
-  }
-
-  if (!isCached) {
     // 3. Call Groq if not in cache
     result = callGroq(prompt);
-
-    // 4. Save the result to cache
-    // Primary cache (max 6 hours for CacheService)
-    cache.put(cacheKey, result, SIX_HOURS_S);
-
-    // Secondary cache (1 day using PropertiesService, 9KB limit per property)
-    const secondaryData = JSON.stringify({ v: result, e: now + ONE_DAY_MS });
-    if (secondaryData.length <= 9000) {
-      PropertiesService.getScriptProperties().setProperty(cacheKey, secondaryData);
-    }
+    // 4. Save the result to cache (for 6 hours / 21600 seconds)
+    cache.put(cacheKey, result, 21600);
   }
 
   // 5. Return the response in JSON format
