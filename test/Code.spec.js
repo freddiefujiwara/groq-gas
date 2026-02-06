@@ -1,10 +1,164 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Code from '../src/Code.js';
 
+// Mocking GAS Global Objects
+global.CacheService = {
+  getScriptCache: vi.fn()
+};
+
+global.Utilities = {
+  base64Encode: vi.fn(),
+  newBlob: vi.fn()
+};
+
+global.ContentService = {
+  createTextOutput: vi.fn(),
+  MimeType: {
+    JSON: 'application/json'
+  }
+};
+
+global.PropertiesService = {
+  getScriptProperties: vi.fn()
+};
+
+global.UrlFetchApp = {
+  fetch: vi.fn()
+};
+
 describe('Code.js', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   describe('doGet', () => {
-    it('should use provided title and return base64 encoded image', () => {
-      expect(true).toBe(true);
+    it('should return error if prompt is missing', () => {
+      const e = { parameter: {} };
+      const mockOutput = { setMimeType: vi.fn() };
+      global.ContentService.createTextOutput.mockReturnValue(mockOutput);
+
+      const result = Code.doGet(e);
+
+      expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
+        JSON.stringify({ error: "Parameter 'p' is required." })
+      );
+      expect(result).toBe(mockOutput);
+    });
+
+    it('should return cached response if available', () => {
+      const e = { parameter: { p: 'hello' } };
+      const mockCache = { get: vi.fn().mockReturnValue('cached answer'), put: vi.fn() };
+      global.CacheService.getScriptCache.mockReturnValue(mockCache);
+
+      const mockBlob = { getBytes: vi.fn().mockReturnValue([1, 2, 3]) };
+      global.Utilities.newBlob.mockReturnValue(mockBlob);
+      global.Utilities.base64Encode.mockReturnValue('encodedKey');
+
+      const mockOutput = { setMimeType: vi.fn() };
+      global.ContentService.createTextOutput.mockReturnValue(mockOutput);
+
+      const result = Code.doGet(e);
+
+      expect(mockCache.get).toHaveBeenCalledWith('groq_encodedKey');
+      expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
+        JSON.stringify({
+          prompt: 'hello',
+          answer: 'cached answer',
+          cached: true
+        })
+      );
+      expect(result).toBe(mockOutput);
+    });
+
+    it('should call Groq and cache result if not in cache', () => {
+      const e = { parameter: { p: 'hello' } };
+      const mockCache = { get: vi.fn().mockReturnValue(null), put: vi.fn() };
+      global.CacheService.getScriptCache.mockReturnValue(mockCache);
+
+      const mockBlob = { getBytes: vi.fn().mockReturnValue([1, 2, 3]) };
+      global.Utilities.newBlob.mockReturnValue(mockBlob);
+      global.Utilities.base64Encode.mockReturnValue('encodedKey');
+
+      // callGroq mocks
+      const mockProperties = { getProperty: vi.fn().mockReturnValue('api-key') };
+      global.PropertiesService.getScriptProperties.mockReturnValue(mockProperties);
+
+      const mockResponse = { getContentText: vi.fn().mockReturnValue(JSON.stringify({
+        choices: [{ message: { content: 'groq answer' } }]
+      })) };
+      global.UrlFetchApp.fetch.mockReturnValue(mockResponse);
+
+      const mockOutput = { setMimeType: vi.fn() };
+      global.ContentService.createTextOutput.mockReturnValue(mockOutput);
+
+      const result = Code.doGet(e);
+
+      expect(mockCache.put).toHaveBeenCalledWith('groq_encodedKey', 'groq answer', 60);
+      expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
+        JSON.stringify({
+          prompt: 'hello',
+          answer: 'groq answer',
+          cached: false
+        })
+      );
+      expect(result).toBe(mockOutput);
+    });
+  });
+
+  describe('createJsonResponse', () => {
+    it('should create text output with JSON mime type', () => {
+      const data = { foo: 'bar' };
+      const mockOutput = { setMimeType: vi.fn() };
+      global.ContentService.createTextOutput.mockReturnValue(mockOutput);
+
+      const result = Code.createJsonResponse(data);
+
+      expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(JSON.stringify(data));
+      expect(mockOutput.setMimeType).toHaveBeenCalledWith('application/json');
+      expect(result).toBe(mockOutput);
+    });
+  });
+
+  describe('callGroq', () => {
+    it('should fetch from Groq API and return content', () => {
+      const prompt = 'hello';
+      const mockProperties = { getProperty: vi.fn().mockReturnValue('api-key') };
+      global.PropertiesService.getScriptProperties.mockReturnValue(mockProperties);
+
+      const mockResponse = { getContentText: vi.fn().mockReturnValue(JSON.stringify({
+        choices: [{ message: { content: 'groq answer' } }]
+      })) };
+      global.UrlFetchApp.fetch.mockReturnValue(mockResponse);
+
+      const result = Code.callGroq(prompt);
+
+      expect(global.UrlFetchApp.fetch).toHaveBeenCalledWith(
+        "https://api.groq.com/openai/v1/chat/completions",
+        expect.objectContaining({
+          method: "post",
+          headers: { Authorization: "Bearer api-key" },
+          payload: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.7
+          })
+        })
+      );
+      expect(result).toBe('groq answer');
+    });
+
+    it('should return error message if fetch fails', () => {
+      const prompt = 'hello';
+      const mockProperties = { getProperty: vi.fn().mockReturnValue('api-key') };
+      global.PropertiesService.getScriptProperties.mockReturnValue(mockProperties);
+
+      global.UrlFetchApp.fetch.mockImplementation(() => {
+        throw new Error('Network Error');
+      });
+
+      const result = Code.callGroq(prompt);
+
+      expect(result).toBe('Error: Error: Network Error');
     });
   });
 });
