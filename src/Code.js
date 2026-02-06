@@ -1,18 +1,18 @@
 /**
- * Webアプリとして公開し、JSONを返すAPI
- * URL末尾に ?p=プロンプト を付けてアクセス
+ * API that returns JSON, published as a Web App
+ * Access by appending ?p=prompt to the end of the URL
  */
-function doGet(e) {
-  // 1. パラメータ p からプロンプトを取得
+export function doGet(e) {
+  // 1. Get the prompt from parameter p
   const prompt = e.parameter.p;
   
   if (!prompt) {
     return createJsonResponse({ error: "Parameter 'p' is required." });
   }
 
-  // 2. キャッシュの確認
+  // 2. Check the cache
   const cache = CacheService.getScriptCache();
-  // キーの競合を防ぐため、プロンプトをBase64エンコードしてキーにする
+  // Base64 encode the prompt to use as a key to prevent key conflicts
   const cacheKey = "groq_" + Utilities.base64Encode(Utilities.newBlob(prompt).getBytes()).substring(0, 200);
   const cachedResponse = cache.get(cacheKey);
 
@@ -23,13 +23,13 @@ function doGet(e) {
     result = cachedResponse;
     isCached = true;
   } else {
-    // 3. キャッシュがない場合はGroqを呼び出す
+    // 3. Call Groq if not in cache
     result = callGroq(prompt);
-    // 4. 結果をキャッシュに保存 (60秒間)
+    // 4. Save the result to cache (for 60 seconds)
     cache.put(cacheKey, result, 60);
   }
 
-  // 5. JSON形式でレスポンスを返す
+  // 5. Return the response in JSON format
   return createJsonResponse({
     prompt: prompt,
     answer: result,
@@ -38,18 +38,18 @@ function doGet(e) {
 }
 
 /**
- * JSONレスポンスを作成する補助関数
+ * Helper function to create a JSON response
  */
-function createJsonResponse(data) {
+export function createJsonResponse(data) {
   const output = ContentService.createTextOutput(JSON.stringify(data));
   output.setMimeType(ContentService.MimeType.JSON);
   return output;
 }
 
 /**
- * Groq API呼び出し（前回と同様）
+ * Groq API call
  */
-function callGroq(prompt) {
+export function callGroq(prompt) {
   const apiKey = PropertiesService.getScriptProperties().getProperty('GROQ_API_KEY');
   const apiUrl = "https://api.groq.com/openai/v1/chat/completions";
   
