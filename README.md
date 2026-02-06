@@ -6,7 +6,7 @@ This repository contains a Google Apps Script (GAS) project that acts as a Web A
 
 - **Web App API**: Responds to HTTP GET requests with JSON data.
 - **Groq API Integration**: Uses the Llama 3.3 70b model via Groq.
-- **Caching**: Results are cached for 60 seconds to improve performance and reduce API calls.
+- **Caching**: Results are cached for up to 1 day to improve performance and reduce API calls (utilizes a dual-layer cache with CacheService and PropertiesService).
 - **Unit Testing**: Fully tested using Vitest with 100% code coverage.
 - **English Documentation**: All code comments and documentation are in English.
 
