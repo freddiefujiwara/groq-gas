@@ -6,10 +6,10 @@ info:
     the prompt provided in the query string.
   version: 1.0.0
 servers:
-  - url: https://script.google.com/macros/s/AKfycbzCuadMRvTEB_iNYUV6TdvGQjjN8ntmJr-2YzLY71h7y-hyIiBCz5eBzvAR9N-wgTX02w/exec
+  - url: https://script.google.com/macros/s/AKfycbzCuadMRvTEB_iNYUV6TdvGQjjN8ntmJr-2YzLY71h7y-hyIiBCz5eBzvAR9N-wgTX02w
     description: Deployed Apps Script Web App URL.
 paths:
-  /:
+  /exec:
     get:
       summary: Get a completion from Groq
       description: Returns the Groq answer for the provided prompt.
