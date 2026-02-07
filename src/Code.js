@@ -27,14 +27,14 @@ export function doGet(e) {
       const parsed = JSON.parse(cachedResponse);
       if (parsed && parsed.status && Object.prototype.hasOwnProperty.call(parsed, "content")) {
         result = parsed;
-      } else {
-        result = { status: "success", content: cachedResponse };
+        isCached = true;
       }
     } catch (e) {
-      result = { status: "success", content: cachedResponse };
+      result = null;
     }
-    isCached = true;
-  } else {
+  }
+
+  if (!result) {
     // 3. Call Groq if not in cache or forced by cache=no
     result = callGroq(prompt);
     // 4. Save the result to cache (for 6 hours / 21600 seconds)

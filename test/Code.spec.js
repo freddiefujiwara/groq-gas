@@ -73,7 +73,7 @@ describe('Code.js', () => {
       expect(result).toBe(mockOutput);
     });
 
-    it('should tolerate legacy cached strings that are not JSON', () => {
+    it('should discard legacy cached strings that are not JSON and call Groq', () => {
       const e = { parameter: { p: 'hello' } };
       const mockCache = { get: vi.fn().mockReturnValue('cached answer'), put: vi.fn() };
       global.CacheService.getScriptCache.mockReturnValue(mockCache);
@@ -82,17 +82,32 @@ describe('Code.js', () => {
       global.Utilities.newBlob.mockReturnValue(mockBlob);
       global.Utilities.base64Encode.mockReturnValue('encodedKey');
 
+      // callGroq mocks
+      const mockProperties = { getProperty: vi.fn().mockReturnValue('api-key') };
+      global.PropertiesService.getScriptProperties.mockReturnValue(mockProperties);
+
+      const mockResponse = { getContentText: vi.fn().mockReturnValue(JSON.stringify({
+        choices: [{ message: { content: 'fresh answer' } }]
+      })) };
+      global.UrlFetchApp.fetch.mockReturnValue(mockResponse);
+
       const mockOutput = { setMimeType: vi.fn() };
       global.ContentService.createTextOutput.mockReturnValue(mockOutput);
 
       const result = Code.doGet(e);
 
       expect(mockCache.get).toHaveBeenCalledWith('groq_encodedKey');
+      expect(global.UrlFetchApp.fetch).toHaveBeenCalled();
+      expect(mockCache.put).toHaveBeenCalledWith(
+        'groq_encodedKey',
+        JSON.stringify({ status: 'success', content: 'fresh answer' }),
+        21600
+      );
       expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
         JSON.stringify({
           prompt: 'hello',
-          answer: { status: 'success', content: 'cached answer' },
-          cached: true
+          answer: { status: 'success', content: 'fresh answer' },
+          cached: false
         })
       );
       expect(result).toBe(mockOutput);
