@@ -104,8 +104,8 @@ describe('Code.js', () => {
       expect(result).toBe(mockOutput);
     });
 
-    it('should bypass cache if parameter c is nocache', () => {
-      const e = { parameter: { p: 'hello', c: 'nocache' } };
+    it('should bypass cache if parameter cache is no', () => {
+      const e = { parameter: { p: 'hello', cache: 'no' } };
       const mockCache = { get: vi.fn().mockReturnValue('cached answer'), put: vi.fn() };
       global.CacheService.getScriptCache.mockReturnValue(mockCache);
 

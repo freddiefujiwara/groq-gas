@@ -7,7 +7,7 @@ This repository contains a Google Apps Script (GAS) project that acts as a Web A
 - **Web App API**: Responds to HTTP GET requests with JSON data.
 - **Groq API Integration**: Uses the Llama 3.3 70b model via Groq.
 - **Caching**: Results are cached for 6 hours (maximum allowed by CacheService) to improve performance and reduce API calls.
-- **Cache Bypass**: Append `&c=nocache` to the URL to force a fresh response from the Groq API.
+- **Cache Bypass**: Append `&cache=no` to the URL to force a fresh response from the Groq API.
 - **Unit Testing**: Fully tested using Vitest with 100% code coverage.
 - **English Documentation**: All code comments and documentation are in English.
 
@@ -60,7 +60,7 @@ Once deployed as a Web App, you can access the API by appending a `p` parameter 
 
 To bypass the cache and get a fresh response:
 
-`https://script.google.com/macros/s/.../exec?p=Your+Prompt+Here&c=nocache`
+`https://script.google.com/macros/s/.../exec?p=Your+Prompt+Here&cache=no`
 
 ### Response Format
 
