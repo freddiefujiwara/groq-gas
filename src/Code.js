@@ -46,7 +46,7 @@ export function doGet(e) {
   // 5. Return the response in JSON format
   return createJsonResponse({
     prompt: prompt,
-    answer: result,
+    answer: result.content,
     cached: isCached
   });
 }

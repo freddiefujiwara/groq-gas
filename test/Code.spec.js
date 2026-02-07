@@ -66,7 +66,7 @@ describe('Code.js', () => {
       expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
         JSON.stringify({
           prompt: 'hello',
-          answer: { status: 'success', content: 'cached answer' },
+          answer: 'cached answer',
           cached: true
         })
       );
@@ -106,7 +106,7 @@ describe('Code.js', () => {
       expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
         JSON.stringify({
           prompt: 'hello',
-          answer: { status: 'success', content: 'fresh answer' },
+          answer: 'fresh answer',
           cached: false
         })
       );
@@ -144,7 +144,7 @@ describe('Code.js', () => {
       expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
         JSON.stringify({
           prompt: 'hello',
-          answer: { status: 'success', content: 'groq answer' },
+          answer: 'groq answer',
           cached: false
         })
       );
@@ -183,7 +183,7 @@ describe('Code.js', () => {
       expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
         JSON.stringify({
           prompt: 'hello',
-          answer: { status: 'success', content: 'fresh answer' },
+          answer: 'fresh answer',
           cached: false
         })
       );
@@ -215,7 +215,7 @@ describe('Code.js', () => {
       expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
         JSON.stringify({
           prompt: 'hello',
-          answer: { status: 'error', content: 'Error: Network Error' },
+          answer: 'Error: Network Error',
           cached: false
         })
       );
