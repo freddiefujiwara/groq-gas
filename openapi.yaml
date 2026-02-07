@@ -20,6 +20,14 @@ paths:
           description: Prompt text sent to Groq.
           schema:
             type: string
+        - name: c
+          in: query
+          required: false
+          description: Cache control flag. Use `nocache` to bypass cached responses.
+          schema:
+            type: string
+            enum:
+              - nocache
       responses:
         "200":
           description: Successful response or parameter error.
