@@ -15,8 +15,8 @@ export function doGet(e) {
   // Base64 encode the prompt to use as a key to prevent key conflicts
   const cacheKey = "groq_" + Utilities.base64Encode(Utilities.newBlob(prompt).getBytes()).substring(0, 200);
 
-  // Skip cache if parameter c is 'nocache'
-  const useCache = e.parameter.c !== 'nocache';
+  // Skip cache if parameter cache is 'no'
+  const useCache = e.parameter.cache !== 'no';
   const cachedResponse = useCache ? cache.get(cacheKey) : null;
 
   let result;
@@ -26,7 +26,7 @@ export function doGet(e) {
     result = cachedResponse;
     isCached = true;
   } else {
-    // 3. Call Groq if not in cache or forced by nocache
+    // 3. Call Groq if not in cache or forced by cache=no
     result = callGroq(prompt);
     // 4. Save the result to cache (for 6 hours / 21600 seconds)
     cache.put(cacheKey, result, 21600);
