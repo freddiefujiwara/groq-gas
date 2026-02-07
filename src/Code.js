@@ -23,13 +23,15 @@ export function doGet(e) {
   let isCached = false;
 
   if (cachedResponse != null) {
-    result = cachedResponse;
+    result = JSON.parse(cachedResponse);
     isCached = true;
   } else {
     // 3. Call Groq if not in cache or forced by cache=no
     result = callGroq(prompt);
     // 4. Save the result to cache (for 6 hours / 21600 seconds)
-    cache.put(cacheKey, result, 21600);
+    if (result.status === "success") {
+      cache.put(cacheKey, JSON.stringify(result), 21600);
+    }
   }
 
   // 5. Return the response in JSON format
@@ -73,8 +75,13 @@ export function callGroq(prompt) {
   try {
     const response = UrlFetchApp.fetch(apiUrl, options);
     const json = JSON.parse(response.getContentText());
-    return json.choices[0].message.content;
+    const content = json?.choices?.[0]?.message?.content;
+    if (content) {
+      return { status: "success", content };
+    }
+    const errorMessage = json?.error?.message || "Unexpected response format";
+    return { status: "error", content: errorMessage };
   } catch (e) {
-    return "Error: " + e.toString();
+    return { status: "error", content: e.toString() };
   }
 }

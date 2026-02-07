@@ -47,7 +47,10 @@ describe('Code.js', () => {
 
     it('should return cached response if available', () => {
       const e = { parameter: { p: 'hello' } };
-      const mockCache = { get: vi.fn().mockReturnValue('cached answer'), put: vi.fn() };
+      const mockCache = {
+        get: vi.fn().mockReturnValue(JSON.stringify({ status: 'success', content: 'cached answer' })),
+        put: vi.fn()
+      };
       global.CacheService.getScriptCache.mockReturnValue(mockCache);
 
       const mockBlob = { getBytes: vi.fn().mockReturnValue([1, 2, 3]) };
@@ -63,7 +66,7 @@ describe('Code.js', () => {
       expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
         JSON.stringify({
           prompt: 'hello',
-          answer: 'cached answer',
+          answer: { status: 'success', content: 'cached answer' },
           cached: true
         })
       );
@@ -93,11 +96,15 @@ describe('Code.js', () => {
 
       const result = Code.doGet(e);
 
-      expect(mockCache.put).toHaveBeenCalledWith('groq_encodedKey', 'groq answer', 21600);
+      expect(mockCache.put).toHaveBeenCalledWith(
+        'groq_encodedKey',
+        JSON.stringify({ status: 'success', content: 'groq answer' }),
+        21600
+      );
       expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
         JSON.stringify({
           prompt: 'hello',
-          answer: 'groq answer',
+          answer: { status: 'success', content: 'groq answer' },
           cached: false
         })
       );
@@ -136,7 +143,39 @@ describe('Code.js', () => {
       expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
         JSON.stringify({
           prompt: 'hello',
-          answer: 'fresh answer',
+          answer: { status: 'success', content: 'fresh answer' },
+          cached: false
+        })
+      );
+      expect(result).toBe(mockOutput);
+    });
+
+    it('should not cache failed Groq responses', () => {
+      const e = { parameter: { p: 'hello' } };
+      const mockCache = { get: vi.fn().mockReturnValue(null), put: vi.fn() };
+      global.CacheService.getScriptCache.mockReturnValue(mockCache);
+
+      const mockBlob = { getBytes: vi.fn().mockReturnValue([1, 2, 3]) };
+      global.Utilities.newBlob.mockReturnValue(mockBlob);
+      global.Utilities.base64Encode.mockReturnValue('encodedKey');
+
+      const mockProperties = { getProperty: vi.fn().mockReturnValue('api-key') };
+      global.PropertiesService.getScriptProperties.mockReturnValue(mockProperties);
+
+      global.UrlFetchApp.fetch.mockImplementation(() => {
+        throw new Error('Network Error');
+      });
+
+      const mockOutput = { setMimeType: vi.fn() };
+      global.ContentService.createTextOutput.mockReturnValue(mockOutput);
+
+      const result = Code.doGet(e);
+
+      expect(mockCache.put).not.toHaveBeenCalled();
+      expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
+        JSON.stringify({
+          prompt: 'hello',
+          answer: { status: 'error', content: 'Error: Network Error' },
           cached: false
         })
       );
@@ -183,7 +222,7 @@ describe('Code.js', () => {
           })
         })
       );
-      expect(result).toBe('groq answer');
+      expect(result).toEqual({ status: 'success', content: 'groq answer' });
     });
 
     it('should return error message if fetch fails', () => {
@@ -197,7 +236,7 @@ describe('Code.js', () => {
 
       const result = Code.callGroq(prompt);
 
-      expect(result).toBe('Error: Error: Network Error');
+      expect(result).toEqual({ status: 'error', content: 'Error: Network Error' });
     });
   });
 });
