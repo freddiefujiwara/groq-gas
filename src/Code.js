@@ -13,26 +13,17 @@ export function doGet(e) {
   // 2. Check the cache
   const cache = CacheService.getScriptCache();
   // Base64 encode the prompt to use as a key to prevent key conflicts
-  const cacheKey = "groq_" + Utilities.base64Encode(Utilities.newBlob(prompt).getBytes()).substring(0, 200);
+  const cacheKey = buildCacheKey(prompt);
 
   // Skip cache if parameter cache is 'no'
   const useCache = e.parameter.cache !== 'no';
   const cachedResponse = useCache ? cache.get(cacheKey) : null;
 
-  let result;
+  let result = null;
   let isCached = false;
 
-  if (cachedResponse != null) {
-    try {
-      const parsed = JSON.parse(cachedResponse);
-      if (parsed && parsed.status && Object.prototype.hasOwnProperty.call(parsed, "content")) {
-        result = parsed;
-        isCached = true;
-      }
-    } catch (e) {
-      result = null;
-    }
-  }
+  result = parseCachedResponse(cachedResponse);
+  isCached = result !== null;
 
   if (!result) {
     // 3. Call Groq if not in cache or forced by cache=no
@@ -58,6 +49,30 @@ export function createJsonResponse(data) {
   const output = ContentService.createTextOutput(JSON.stringify(data));
   output.setMimeType(ContentService.MimeType.JSON);
   return output;
+}
+
+function buildCacheKey(prompt) {
+  return (
+    "groq_" +
+    Utilities.base64Encode(Utilities.newBlob(prompt).getBytes()).substring(0, 200)
+  );
+}
+
+function parseCachedResponse(cachedResponse) {
+  if (!cachedResponse) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(cachedResponse);
+    if (parsed && parsed.status && Object.prototype.hasOwnProperty.call(parsed, "content")) {
+      return parsed;
+    }
+  } catch (e) {
+    return null;
+  }
+
+  return null;
 }
 
 /**
