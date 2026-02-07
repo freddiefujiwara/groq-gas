@@ -73,6 +73,31 @@ describe('Code.js', () => {
       expect(result).toBe(mockOutput);
     });
 
+    it('should tolerate legacy cached strings that are not JSON', () => {
+      const e = { parameter: { p: 'hello' } };
+      const mockCache = { get: vi.fn().mockReturnValue('cached answer'), put: vi.fn() };
+      global.CacheService.getScriptCache.mockReturnValue(mockCache);
+
+      const mockBlob = { getBytes: vi.fn().mockReturnValue([1, 2, 3]) };
+      global.Utilities.newBlob.mockReturnValue(mockBlob);
+      global.Utilities.base64Encode.mockReturnValue('encodedKey');
+
+      const mockOutput = { setMimeType: vi.fn() };
+      global.ContentService.createTextOutput.mockReturnValue(mockOutput);
+
+      const result = Code.doGet(e);
+
+      expect(mockCache.get).toHaveBeenCalledWith('groq_encodedKey');
+      expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
+        JSON.stringify({
+          prompt: 'hello',
+          answer: { status: 'success', content: 'cached answer' },
+          cached: true
+        })
+      );
+      expect(result).toBe(mockOutput);
+    });
+
     it('should call Groq and cache result if not in cache', () => {
       const e = { parameter: { p: 'hello' } };
       const mockCache = { get: vi.fn().mockReturnValue(null), put: vi.fn() };

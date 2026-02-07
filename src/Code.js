@@ -23,7 +23,16 @@ export function doGet(e) {
   let isCached = false;
 
   if (cachedResponse != null) {
-    result = JSON.parse(cachedResponse);
+    try {
+      const parsed = JSON.parse(cachedResponse);
+      if (parsed && parsed.status && Object.prototype.hasOwnProperty.call(parsed, "content")) {
+        result = parsed;
+      } else {
+        result = { status: "success", content: cachedResponse };
+      }
+    } catch (e) {
+      result = { status: "success", content: cachedResponse };
+    }
     isCached = true;
   } else {
     // 3. Call Groq if not in cache or forced by cache=no
