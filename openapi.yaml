@@ -1,0 +1,68 @@
+openapi: 3.0.3
+info:
+  title: Groq GAS Web App API
+  description: >-
+    Google Apps Script web app that returns a JSON response from Groq based on
+    the prompt provided in the query string.
+  version: 1.0.0
+servers:
+  - url: https://script.google.com/macros/s/AKfycbzCuadMRvTEB_iNYUV6TdvGQjjN8ntmJr-2YzLY71h7y-hyIiBCz5eBzvAR9N-wgTX02w/exec
+    description: Deployed Apps Script Web App URL.
+paths:
+  /:
+    get:
+      summary: Get a completion from Groq
+      description: Returns the Groq answer for the provided prompt.
+      parameters:
+        - name: p
+          in: query
+          required: true
+          description: Prompt text sent to Groq.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response or parameter error.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/GroqResponse"
+                  - $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                success:
+                  summary: Successful response
+                  value:
+                    prompt: "Hello"
+                    answer: "Hi there!"
+                    cached: false
+                error:
+                  summary: Missing parameter
+                  value:
+                    error: "Parameter 'p' is required."
+components:
+  schemas:
+    GroqResponse:
+      type: object
+      required:
+        - prompt
+        - answer
+        - cached
+      properties:
+        prompt:
+          type: string
+          description: Prompt provided in the query string.
+        answer:
+          type: string
+          description: Response content from Groq.
+        cached:
+          type: boolean
+          description: Whether the response was served from cache.
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message when the request is invalid.

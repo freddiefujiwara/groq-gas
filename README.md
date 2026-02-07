@@ -55,6 +55,12 @@ Once deployed as a Web App, you can access the API by appending a `p` parameter 
 
 `https://script.google.com/macros/s/.../exec?p=Your+Prompt+Here`
 
+### OpenAPI Specification
+
+An OpenAPI 3.0 specification is available in this repository:
+
+- [`openapi.yaml`](openapi.yaml)
+
 ### Response Format
 
 ```json
