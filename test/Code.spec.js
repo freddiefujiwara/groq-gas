@@ -93,11 +93,50 @@ describe('Code.js', () => {
 
       const result = Code.doGet(e);
 
-      expect(mockCache.put).toHaveBeenCalledWith('groq_encodedKey', 'groq answer', 60);
+      expect(mockCache.put).toHaveBeenCalledWith('groq_encodedKey', 'groq answer', 21600);
       expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
         JSON.stringify({
           prompt: 'hello',
           answer: 'groq answer',
+          cached: false
+        })
+      );
+      expect(result).toBe(mockOutput);
+    });
+
+    it('should bypass cache if parameter c is nocache', () => {
+      const e = { parameter: { p: 'hello', c: 'nocache' } };
+      const mockCache = { get: vi.fn().mockReturnValue('cached answer'), put: vi.fn() };
+      global.CacheService.getScriptCache.mockReturnValue(mockCache);
+
+      const mockBlob = { getBytes: vi.fn().mockReturnValue([1, 2, 3]) };
+      global.Utilities.newBlob.mockReturnValue(mockBlob);
+      global.Utilities.base64Encode.mockReturnValue('encodedKey');
+
+      // callGroq mocks
+      const mockProperties = { getProperty: vi.fn().mockReturnValue('api-key') };
+      global.PropertiesService.getScriptProperties.mockReturnValue(mockProperties);
+
+      const mockResponse = { getContentText: vi.fn().mockReturnValue(JSON.stringify({
+        choices: [{ message: { content: 'fresh answer' } }]
+      })) };
+      global.UrlFetchApp.fetch.mockReturnValue(mockResponse);
+
+      const mockOutput = { setMimeType: vi.fn() };
+      global.ContentService.createTextOutput.mockReturnValue(mockOutput);
+
+      const result = Code.doGet(e);
+
+      // Verify cache was NOT queried
+      expect(mockCache.get).not.toHaveBeenCalled();
+
+      // Verify Groq was called
+      expect(global.UrlFetchApp.fetch).toHaveBeenCalled();
+
+      expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
+        JSON.stringify({
+          prompt: 'hello',
+          answer: 'fresh answer',
           cached: false
         })
       );
