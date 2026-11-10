@@ -282,7 +282,7 @@ describe('Code.js', () => {
   describe('callGroq', () => {
     it('should fetch from Groq API and return content', () => {
       const prompt = 'hello';
-      const mockProperties = { getProperty: vi.fn().mockReturnValue('api-key') };
+      const mockProperties = { getProperty: vi.fn((key) => (key === 'GROQ_API_KEY' ? 'api-key' : null)) };
       global.PropertiesService.getScriptProperties.mockReturnValue(mockProperties);
 
       const mockResponse = { getContentText: vi.fn().mockReturnValue(JSON.stringify({
@@ -298,13 +298,31 @@ describe('Code.js', () => {
           method: "post",
           headers: { Authorization: "Bearer api-key" },
           payload: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
+            model: "llama-3.1-8b-instant",
             messages: [{ role: "user", content: prompt }],
             temperature: 0.7
           })
         })
       );
       expect(result).toEqual({ status: 'success', content: 'groq answer' });
+    });
+
+    it('should use the GROQ_MODEL script property when set', () => {
+      const prompt = 'hello';
+      const mockProperties = {
+        getProperty: vi.fn((key) => (key === 'GROQ_API_KEY' ? 'api-key' : 'custom-model-x'))
+      };
+      global.PropertiesService.getScriptProperties.mockReturnValue(mockProperties);
+
+      const mockResponse = { getContentText: vi.fn().mockReturnValue(JSON.stringify({
+        choices: [{ message: { content: 'groq answer' } }]
+      })) };
+      global.UrlFetchApp.fetch.mockReturnValue(mockResponse);
+
+      Code.callGroq(prompt);
+
+      const payload = JSON.parse(global.UrlFetchApp.fetch.mock.calls[0][1].payload);
+      expect(payload.model).toBe('custom-model-x');
     });
 
     it('should return error message if fetch fails', () => {

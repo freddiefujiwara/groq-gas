@@ -79,11 +79,16 @@ function parseCachedResponse(cachedResponse) {
  * Groq API call
  */
 export function callGroq(prompt) {
-  const apiKey = PropertiesService.getScriptProperties().getProperty('GROQ_API_KEY');
+  const scriptProperties = PropertiesService.getScriptProperties();
+  const apiKey = scriptProperties.getProperty('GROQ_API_KEY');
+  // Model is configurable via the GROQ_MODEL script property so a retired
+  // model can be swapped without a code change. Default matches the model
+  // used successfully by time-table-gas.
+  const model = scriptProperties.getProperty('GROQ_MODEL') || "llama-3.1-8b-instant";
   const apiUrl = "https://api.groq.com/openai/v1/chat/completions";
-  
+
   const payload = {
-    "model": "llama-3.3-70b-versatile",
+    "model": model,
     "messages": [{"role": "user", "content": prompt}],
     "temperature": 0.7
   };
