@@ -5,18 +5,45 @@
 export function doGet(e) {
   // 1. Get the prompt from parameter p
   const prompt = e.parameter.p;
-  
+
   if (!prompt) {
     return createJsonResponse({ error: "Parameter 'p' is required." });
   }
 
+  // Skip cache if parameter cache is 'no'
+  const useCache = e.parameter.cache !== 'no';
+  return createJsonResponse(answerPrompt(prompt, useCache));
+}
+
+/**
+ * POST variant for callers that cannot put a long prompt in a URL
+ * (UrlFetchApp rejects URLs over its length limit).
+ * Accepts a JSON body {"p": "..."} (or {"prompt": "..."}), or a raw
+ * text body treated as the prompt itself.
+ */
+export function doPost(e) {
+  let prompt = '';
+  const contents = e && e.postData && e.postData.contents ? e.postData.contents : '';
+  try {
+    const body = JSON.parse(contents);
+    prompt = body.p || body.prompt || '';
+  } catch (err) {
+    prompt = contents;
+  }
+
+  if (!prompt) {
+    return createJsonResponse({ error: "Parameter 'p' is required." });
+  }
+
+  return createJsonResponse(answerPrompt(prompt, true));
+}
+
+function answerPrompt(prompt, useCache) {
   // 2. Check the cache
   const cache = CacheService.getScriptCache();
   // Base64 encode the prompt to use as a key to prevent key conflicts
   const cacheKey = buildCacheKey(prompt);
 
-  // Skip cache if parameter cache is 'no'
-  const useCache = e.parameter.cache !== 'no';
   const cachedResponse = useCache ? cache.get(cacheKey) : null;
 
   let result = null;
@@ -35,11 +62,11 @@ export function doGet(e) {
   }
 
   // 5. Return the response in JSON format
-  return createJsonResponse({
+  return {
     prompt: prompt,
     answer: result.content,
     cached: isCached
-  });
+  };
 }
 
 /**

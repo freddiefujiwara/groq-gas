@@ -265,6 +265,69 @@ describe('Code.js', () => {
     });
   });
 
+  describe('doPost', () => {
+    const setupCacheHit = () => {
+      const mockCache = {
+        get: vi.fn().mockReturnValue(JSON.stringify({ status: 'success', content: 'cached answer' })),
+        put: vi.fn()
+      };
+      global.CacheService.getScriptCache.mockReturnValue(mockCache);
+      const mockBlob = { getBytes: vi.fn().mockReturnValue([1, 2, 3]) };
+      global.Utilities.newBlob.mockReturnValue(mockBlob);
+      global.Utilities.base64Encode.mockReturnValue('encodedKey');
+      const mockOutput = { setMimeType: vi.fn() };
+      global.ContentService.createTextOutput.mockReturnValue(mockOutput);
+      return mockOutput;
+    };
+
+    it('should accept a JSON body with p and return the answer', () => {
+      const mockOutput = setupCacheHit();
+      const e = { postData: { contents: JSON.stringify({ p: 'hello' }) } };
+
+      const result = Code.doPost(e);
+
+      expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
+        JSON.stringify({ prompt: 'hello', answer: 'cached answer', cached: true })
+      );
+      expect(result).toBe(mockOutput);
+    });
+
+    it('should accept a raw text body as the prompt', () => {
+      const mockCache = { get: vi.fn().mockReturnValue(null), put: vi.fn() };
+      global.CacheService.getScriptCache.mockReturnValue(mockCache);
+      const mockBlob = { getBytes: vi.fn().mockReturnValue([1, 2, 3]) };
+      global.Utilities.newBlob.mockReturnValue(mockBlob);
+      global.Utilities.base64Encode.mockReturnValue('encodedKey');
+      const mockProperties = { getProperty: vi.fn().mockReturnValue('api-key') };
+      global.PropertiesService.getScriptProperties.mockReturnValue(mockProperties);
+      const mockResponse = { getContentText: vi.fn().mockReturnValue(JSON.stringify({
+        choices: [{ message: { content: 'fresh answer' } }]
+      })) };
+      global.UrlFetchApp.fetch.mockReturnValue(mockResponse);
+      const mockOutput = { setMimeType: vi.fn() };
+      global.ContentService.createTextOutput.mockReturnValue(mockOutput);
+
+      const result = Code.doPost({ postData: { contents: 'hello' } });
+
+      expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
+        JSON.stringify({ prompt: 'hello', answer: 'fresh answer', cached: false })
+      );
+      expect(result).toBe(mockOutput);
+    });
+
+    it('should return error if the body is empty', () => {
+      const mockOutput = { setMimeType: vi.fn() };
+      global.ContentService.createTextOutput.mockReturnValue(mockOutput);
+
+      const result = Code.doPost({ postData: { contents: '' } });
+
+      expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
+        JSON.stringify({ error: "Parameter 'p' is required." })
+      );
+      expect(result).toBe(mockOutput);
+    });
+  });
+
   describe('createJsonResponse', () => {
     it('should create text output with JSON mime type', () => {
       const data = { foo: 'bar' };
