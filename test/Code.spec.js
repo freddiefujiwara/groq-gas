@@ -8,7 +8,10 @@ global.CacheService = {
 
 global.Utilities = {
   base64Encode: vi.fn(),
-  newBlob: vi.fn()
+  newBlob: vi.fn(),
+  computeDigest: vi.fn(),
+  DigestAlgorithm: { SHA_256: 'SHA_256' },
+  Charset: { UTF_8: 'UTF_8' }
 };
 
 global.ContentService = {
@@ -29,6 +32,7 @@ global.UrlFetchApp = {
 describe('Code.js', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    global.Utilities.computeDigest.mockReturnValue([9, 8, 7]);
   });
 
   describe('doGet', () => {
@@ -325,6 +329,31 @@ describe('Code.js', () => {
         JSON.stringify({ error: "Parameter 'p' is required." })
       );
       expect(result).toBe(mockOutput);
+    });
+  });
+
+  describe('cache key', () => {
+    it('should use different cache keys for prompts that share a long prefix', () => {
+      const mockCache = { get: vi.fn().mockReturnValue(null), put: vi.fn() };
+      global.CacheService.getScriptCache.mockReturnValue(mockCache);
+      global.Utilities.computeDigest.mockImplementation((algo, value) => [value.length, value.charCodeAt(value.length - 1)]);
+      global.Utilities.base64Encode.mockImplementation((bytes) => 'k' + bytes.join('-'));
+      const mockProperties = { getProperty: vi.fn().mockReturnValue('api-key') };
+      global.PropertiesService.getScriptProperties.mockReturnValue(mockProperties);
+      global.UrlFetchApp.fetch.mockReturnValue({
+        getContentText: vi.fn().mockReturnValue(JSON.stringify({
+          choices: [{ message: { content: 'ans' } }]
+        }))
+      });
+      const mockOutput = { setMimeType: vi.fn() };
+      global.ContentService.createTextOutput.mockReturnValue(mockOutput);
+
+      const prefix = 'same long instruction prefix '.repeat(10);
+      Code.doGet({ parameter: { p: prefix + 'A' } });
+      Code.doGet({ parameter: { p: prefix + 'B' } });
+
+      const keys = mockCache.get.mock.calls.map((c) => c[0]);
+      expect(keys[0]).not.toBe(keys[1]);
     });
   });
 

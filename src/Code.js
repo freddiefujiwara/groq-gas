@@ -79,10 +79,15 @@ export function createJsonResponse(data) {
 }
 
 function buildCacheKey(prompt) {
-  return (
-    "groq_" +
-    Utilities.base64Encode(Utilities.newBlob(prompt).getBytes()).substring(0, 200)
+  // Hash the whole prompt: truncating the encoded prompt itself makes
+  // long prompts that share a prefix (e.g. templated instructions)
+  // collide on the same cache key.
+  const digest = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    prompt,
+    Utilities.Charset.UTF_8
   );
+  return "groq_" + Utilities.base64Encode(digest);
 }
 
 function parseCachedResponse(cachedResponse) {
