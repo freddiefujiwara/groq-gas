@@ -33,6 +33,9 @@ describe('Code.js', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     global.Utilities.computeDigest.mockReturnValue([9, 8, 7]);
+    global.PropertiesService.getScriptProperties.mockReturnValue({
+      getProperty: vi.fn((name) => (name === 'API_TOKEN' ? 'test-token' : 'api-key'))
+    });
   });
 
   describe('doGet', () => {
@@ -50,7 +53,7 @@ describe('Code.js', () => {
     });
 
     it('should return cached response if available', () => {
-      const e = { parameter: { p: 'hello' } };
+      const e = { parameter: { p: 'hello', token: 'test-token' } };
       const mockCache = {
         get: vi.fn().mockReturnValue(JSON.stringify({ status: 'success', content: 'cached answer' })),
         put: vi.fn()
@@ -78,7 +81,7 @@ describe('Code.js', () => {
     });
 
     it('should discard legacy cached strings that are not JSON and call Groq', () => {
-      const e = { parameter: { p: 'hello' } };
+      const e = { parameter: { p: 'hello', token: 'test-token' } };
       const mockCache = { get: vi.fn().mockReturnValue('cached answer'), put: vi.fn() };
       global.CacheService.getScriptCache.mockReturnValue(mockCache);
 
@@ -87,7 +90,7 @@ describe('Code.js', () => {
       global.Utilities.base64Encode.mockReturnValue('encodedKey');
 
       // callGroq mocks
-      const mockProperties = { getProperty: vi.fn().mockReturnValue('api-key') };
+      const mockProperties = { getProperty: vi.fn((name) => (name === 'API_TOKEN' ? 'test-token' : 'api-key')) };
       global.PropertiesService.getScriptProperties.mockReturnValue(mockProperties);
 
       const mockResponse = { getContentText: vi.fn().mockReturnValue(JSON.stringify({
@@ -118,7 +121,7 @@ describe('Code.js', () => {
     });
 
     it('should discard cached JSON missing content and call Groq', () => {
-      const e = { parameter: { p: 'hello' } };
+      const e = { parameter: { p: 'hello', token: 'test-token' } };
       const mockCache = {
         get: vi.fn().mockReturnValue(JSON.stringify({ status: 'success' })),
         put: vi.fn()
@@ -129,7 +132,7 @@ describe('Code.js', () => {
       global.Utilities.newBlob.mockReturnValue(mockBlob);
       global.Utilities.base64Encode.mockReturnValue('encodedKey');
 
-      const mockProperties = { getProperty: vi.fn().mockReturnValue('api-key') };
+      const mockProperties = { getProperty: vi.fn((name) => (name === 'API_TOKEN' ? 'test-token' : 'api-key')) };
       global.PropertiesService.getScriptProperties.mockReturnValue(mockProperties);
 
       const mockResponse = { getContentText: vi.fn().mockReturnValue(JSON.stringify({
@@ -160,7 +163,7 @@ describe('Code.js', () => {
     });
 
     it('should call Groq and cache result if not in cache', () => {
-      const e = { parameter: { p: 'hello' } };
+      const e = { parameter: { p: 'hello', token: 'test-token' } };
       const mockCache = { get: vi.fn().mockReturnValue(null), put: vi.fn() };
       global.CacheService.getScriptCache.mockReturnValue(mockCache);
 
@@ -169,7 +172,7 @@ describe('Code.js', () => {
       global.Utilities.base64Encode.mockReturnValue('encodedKey');
 
       // callGroq mocks
-      const mockProperties = { getProperty: vi.fn().mockReturnValue('api-key') };
+      const mockProperties = { getProperty: vi.fn((name) => (name === 'API_TOKEN' ? 'test-token' : 'api-key')) };
       global.PropertiesService.getScriptProperties.mockReturnValue(mockProperties);
 
       const mockResponse = { getContentText: vi.fn().mockReturnValue(JSON.stringify({
@@ -198,7 +201,7 @@ describe('Code.js', () => {
     });
 
     it('should bypass cache if parameter cache is no', () => {
-      const e = { parameter: { p: 'hello', cache: 'no' } };
+      const e = { parameter: { p: 'hello', cache: 'no', token: 'test-token' } };
       const mockCache = { get: vi.fn().mockReturnValue('cached answer'), put: vi.fn() };
       global.CacheService.getScriptCache.mockReturnValue(mockCache);
 
@@ -207,7 +210,7 @@ describe('Code.js', () => {
       global.Utilities.base64Encode.mockReturnValue('encodedKey');
 
       // callGroq mocks
-      const mockProperties = { getProperty: vi.fn().mockReturnValue('api-key') };
+      const mockProperties = { getProperty: vi.fn((name) => (name === 'API_TOKEN' ? 'test-token' : 'api-key')) };
       global.PropertiesService.getScriptProperties.mockReturnValue(mockProperties);
 
       const mockResponse = { getContentText: vi.fn().mockReturnValue(JSON.stringify({
@@ -237,7 +240,7 @@ describe('Code.js', () => {
     });
 
     it('should not cache failed Groq responses', () => {
-      const e = { parameter: { p: 'hello' } };
+      const e = { parameter: { p: 'hello', token: 'test-token' } };
       const mockCache = { get: vi.fn().mockReturnValue(null), put: vi.fn() };
       global.CacheService.getScriptCache.mockReturnValue(mockCache);
 
@@ -245,7 +248,7 @@ describe('Code.js', () => {
       global.Utilities.newBlob.mockReturnValue(mockBlob);
       global.Utilities.base64Encode.mockReturnValue('encodedKey');
 
-      const mockProperties = { getProperty: vi.fn().mockReturnValue('api-key') };
+      const mockProperties = { getProperty: vi.fn((name) => (name === 'API_TOKEN' ? 'test-token' : 'api-key')) };
       global.PropertiesService.getScriptProperties.mockReturnValue(mockProperties);
 
       global.UrlFetchApp.fetch.mockImplementation(() => {
@@ -286,7 +289,7 @@ describe('Code.js', () => {
 
     it('should accept a JSON body with p and return the answer', () => {
       const mockOutput = setupCacheHit();
-      const e = { postData: { contents: JSON.stringify({ p: 'hello' }) } };
+      const e = { postData: { contents: JSON.stringify({ p: 'hello', token: 'test-token' }) } };
 
       const result = Code.doPost(e);
 
@@ -302,7 +305,7 @@ describe('Code.js', () => {
       const mockBlob = { getBytes: vi.fn().mockReturnValue([1, 2, 3]) };
       global.Utilities.newBlob.mockReturnValue(mockBlob);
       global.Utilities.base64Encode.mockReturnValue('encodedKey');
-      const mockProperties = { getProperty: vi.fn().mockReturnValue('api-key') };
+      const mockProperties = { getProperty: vi.fn((name) => (name === 'API_TOKEN' ? 'test-token' : 'api-key')) };
       global.PropertiesService.getScriptProperties.mockReturnValue(mockProperties);
       const mockResponse = { getContentText: vi.fn().mockReturnValue(JSON.stringify({
         choices: [{ message: { content: 'fresh answer' } }]
@@ -311,7 +314,7 @@ describe('Code.js', () => {
       const mockOutput = { setMimeType: vi.fn() };
       global.ContentService.createTextOutput.mockReturnValue(mockOutput);
 
-      const result = Code.doPost({ postData: { contents: 'hello' } });
+      const result = Code.doPost({ postData: { contents: 'hello' }, parameter: { token: 'test-token' } });
 
       expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
         JSON.stringify({ prompt: 'hello', answer: 'fresh answer', cached: false })
@@ -332,13 +335,77 @@ describe('Code.js', () => {
     });
   });
 
+  describe('authorization', () => {
+    const setupOutput = () => {
+      const mockOutput = { setMimeType: vi.fn() };
+      global.ContentService.createTextOutput.mockReturnValue(mockOutput);
+      return mockOutput;
+    };
+
+    it('should reject a GET request without a token', () => {
+      setupOutput();
+
+      Code.doGet({ parameter: { p: 'hello' } });
+
+      expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
+        JSON.stringify({ error: 'Unauthorized.' })
+      );
+      expect(global.UrlFetchApp.fetch).not.toHaveBeenCalled();
+    });
+
+    it('should reject a GET request with a wrong token', () => {
+      setupOutput();
+
+      Code.doGet({ parameter: { p: 'hello', token: 'wrong' } });
+
+      expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
+        JSON.stringify({ error: 'Unauthorized.' })
+      );
+    });
+
+    it('should reject every request when API_TOKEN is not set', () => {
+      global.PropertiesService.getScriptProperties.mockReturnValue({
+        getProperty: vi.fn().mockReturnValue(null)
+      });
+      setupOutput();
+
+      Code.doGet({ parameter: { p: 'hello', token: 'test-token' } });
+
+      expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
+        JSON.stringify({ error: 'Unauthorized.' })
+      );
+    });
+
+    it('should reject a POST request without a token', () => {
+      setupOutput();
+
+      Code.doPost({ postData: { contents: JSON.stringify({ p: 'hello' }) } });
+
+      expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
+        JSON.stringify({ error: 'Unauthorized.' })
+      );
+      expect(global.UrlFetchApp.fetch).not.toHaveBeenCalled();
+    });
+
+    it('should reject a prompt over the length limit', () => {
+      setupOutput();
+
+      Code.doGet({ parameter: { p: 'x'.repeat(20001), token: 'test-token' } });
+
+      expect(global.ContentService.createTextOutput).toHaveBeenCalledWith(
+        JSON.stringify({ error: 'Prompt is too long.' })
+      );
+      expect(global.UrlFetchApp.fetch).not.toHaveBeenCalled();
+    });
+  });
+
   describe('cache key', () => {
     it('should use different cache keys for prompts that share a long prefix', () => {
       const mockCache = { get: vi.fn().mockReturnValue(null), put: vi.fn() };
       global.CacheService.getScriptCache.mockReturnValue(mockCache);
       global.Utilities.computeDigest.mockImplementation((algo, value) => [value.length, value.charCodeAt(value.length - 1)]);
       global.Utilities.base64Encode.mockImplementation((bytes) => 'k' + bytes.join('-'));
-      const mockProperties = { getProperty: vi.fn().mockReturnValue('api-key') };
+      const mockProperties = { getProperty: vi.fn((name) => (name === 'API_TOKEN' ? 'test-token' : 'api-key')) };
       global.PropertiesService.getScriptProperties.mockReturnValue(mockProperties);
       global.UrlFetchApp.fetch.mockReturnValue({
         getContentText: vi.fn().mockReturnValue(JSON.stringify({
@@ -349,8 +416,8 @@ describe('Code.js', () => {
       global.ContentService.createTextOutput.mockReturnValue(mockOutput);
 
       const prefix = 'same long instruction prefix '.repeat(10);
-      Code.doGet({ parameter: { p: prefix + 'A' } });
-      Code.doGet({ parameter: { p: prefix + 'B' } });
+      Code.doGet({ parameter: { p: prefix + 'A', token: 'test-token' } });
+      Code.doGet({ parameter: { p: prefix + 'B', token: 'test-token' } });
 
       const keys = mockCache.get.mock.calls.map((c) => c[0]);
       expect(keys[0]).not.toBe(keys[1]);
