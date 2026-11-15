@@ -1,13 +1,46 @@
 /**
  * API that returns JSON, published as a Web App
  * Access by appending ?p=prompt to the end of the URL
+ *
+ * Every request must carry the shared token stored in the API_TOKEN
+ * script property: as the `token` parameter (GET, or POST via the
+ * query string) or as the `token` field of the JSON body (POST).
+ * The endpoint answers LLM prompts with the owner's Groq key, so it
+ * fails closed: when API_TOKEN is not set, all requests are rejected.
  */
+const MAX_PROMPT_LENGTH = 20000;
+
+function isAuthorized(providedToken) {
+  const expected = PropertiesService.getScriptProperties().getProperty(
+    "API_TOKEN"
+  );
+  return (
+    Boolean(expected) &&
+    typeof providedToken === "string" &&
+    providedToken === expected
+  );
+}
+
+function validateRequest(prompt, providedToken) {
+  if (!prompt) {
+    return "Parameter 'p' is required.";
+  }
+  if (!isAuthorized(providedToken)) {
+    return "Unauthorized.";
+  }
+  if (prompt.length > MAX_PROMPT_LENGTH) {
+    return "Prompt is too long.";
+  }
+  return null;
+}
+
 export function doGet(e) {
   // 1. Get the prompt from parameter p
   const prompt = e.parameter.p;
 
-  if (!prompt) {
-    return createJsonResponse({ error: "Parameter 'p' is required." });
+  const error = validateRequest(prompt, e.parameter.token);
+  if (error) {
+    return createJsonResponse({ error });
   }
 
   // Skip cache if parameter cache is 'no'
@@ -23,16 +56,20 @@ export function doGet(e) {
  */
 export function doPost(e) {
   let prompt = '';
+  let bodyToken;
   const contents = e && e.postData && e.postData.contents ? e.postData.contents : '';
   try {
     const body = JSON.parse(contents);
     prompt = body.p || body.prompt || '';
+    bodyToken = body.token;
   } catch (err) {
     prompt = contents;
   }
 
-  if (!prompt) {
-    return createJsonResponse({ error: "Parameter 'p' is required." });
+  const providedToken = bodyToken || (e && e.parameter ? e.parameter.token : undefined);
+  const error = validateRequest(prompt, providedToken);
+  if (error) {
+    return createJsonResponse({ error });
   }
 
   return createJsonResponse(answerPrompt(prompt, true));
