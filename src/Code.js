@@ -22,7 +22,7 @@ function isAuthorized(providedToken) {
 }
 
 function validateRequest(prompt, providedToken) {
-  if (!prompt) {
+  if (typeof prompt !== "string" || !prompt) {
     return "Parameter 'p' is required.";
   }
   if (!isAuthorized(providedToken)) {
@@ -36,15 +36,16 @@ function validateRequest(prompt, providedToken) {
 
 export function doGet(e) {
   // 1. Get the prompt from parameter p
-  const prompt = e.parameter.p;
+  const parameter = (e && e.parameter) || {};
+  const prompt = parameter.p;
 
-  const error = validateRequest(prompt, e.parameter.token);
+  const error = validateRequest(prompt, parameter.token);
   if (error) {
     return createJsonResponse({ error });
   }
 
   // Skip cache if parameter cache is 'no'
-  const useCache = e.parameter.cache !== 'no';
+  const useCache = parameter.cache !== 'no';
   return createJsonResponse(answerPrompt(prompt, useCache));
 }
 
@@ -134,7 +135,12 @@ function parseCachedResponse(cachedResponse) {
 
   try {
     const parsed = JSON.parse(cachedResponse);
-    if (parsed && parsed.status && Object.prototype.hasOwnProperty.call(parsed, "content")) {
+    if (
+      parsed &&
+      parsed.status === "success" &&
+      typeof parsed.content === "string" &&
+      parsed.content
+    ) {
       return parsed;
     }
   } catch (e) {
@@ -174,12 +180,24 @@ export function callGroq(prompt) {
     const response = UrlFetchApp.fetch(apiUrl, options);
     const json = JSON.parse(response.getContentText());
     const content = json?.choices?.[0]?.message?.content;
-    if (content) {
+    if (typeof content === "string" && content) {
       return { status: "success", content };
     }
-    const errorMessage = json?.error?.message || "Unexpected response format";
+    const upstreamMessage = json?.error?.message;
+    const errorMessage =
+      typeof upstreamMessage === "string" && upstreamMessage
+        ? upstreamMessage
+        : "Unexpected response format";
     return { status: "error", content: errorMessage };
   } catch (e) {
-    return { status: "error", content: e.toString() };
+    return { status: "error", content: errorText_(e) };
+  }
+}
+
+function errorText_(e) {
+  try {
+    return e.toString();
+  } catch (ignored) {
+    return "Unknown error";
   }
 }
